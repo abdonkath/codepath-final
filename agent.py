@@ -29,3 +29,17 @@ Return ONLY a JSON array of 4-6 tasks. Each task must have:
 - "interval_days": how often it recurs in days, e.g. 1=daily, 7=weekly (integer)
 
 Return only the JSON array. No explanation, no markdown fences."""
+
+    message = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=1024,
+        messages=[{"role": "user", "content": prompt}],
+    )
+
+    raw = message.content[0].text.strip()
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+
+    return json.loads(raw.strip())
