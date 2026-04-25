@@ -90,4 +90,15 @@ Birds are sensitive to fumes — never use non-stick cookware or aerosol sprays 
 }
 
 
+def retrieve(species: str, breed: str = "") -> str:
+    """Return care guide text for a given species and optional breed."""
+    species = species.lower().strip()
+    breed = breed.lower().strip()
 
+    species_data = PET_CARE_GUIDES.get(species, PET_CARE_GUIDES["other"])
+    general = species_data.get("general", "")
+    breed_specific = species_data.get(breed, "")
+
+    if breed_specific:
+        return f"General {species} care:\n{general}\n\nBreed-specific care for {breed}:\n{breed_specific}"
+    return f"General {species} care:\n{general}"
