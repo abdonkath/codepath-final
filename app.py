@@ -1,3 +1,5 @@
+# streamlit run app.py
+
 import streamlit as st
 from pawpal_system import Owner, Pet, Task, Scheduler
 
