@@ -58,6 +58,25 @@ if st.session_state.get("ai_suggestions") and st.session_state.get("suggestions_
     st.subheader(f"AI Suggested Tasks for {pet_for}")
     st.info("Uncheck any tasks you don't want, then click **Confirm Selected Tasks**.")
 
+    import re
+
+    _label_to_days = {"yes, daily": 1, "yes, weekly": 7, "yes, monthly": 30, "yes, yearly": 365}
+    _days_to_label = {1: "Yes, daily", 7: "Yes, weekly", 30: "Yes, monthly", 365: "Yes, yearly"}
+
+    def _to_schedule(t):
+        if not t["recurring"]:
+            return "No"
+        return _days_to_label.get(t["interval_days"], f"Yes, every {t['interval_days']} days")
+
+    def _parse_schedule(val):
+        v = str(val).strip().lower()
+        if v == "no":
+            return False, 1
+        if v in _label_to_days:
+            return True, _label_to_days[v]
+        match = re.search(r"(\d+)", v)
+        return True, int(match.group(1)) if match else (True, 1)
+
     df = pd.DataFrame([{
         "Add": True,
         "Task": t["name"],
@@ -65,8 +84,7 @@ if st.session_state.get("ai_suggestions") and st.session_state.get("suggestions_
         "Duration (min)": t["duration_minutes"],
         "Priority": t["priority"],
         "Time": t["time"],
-        "Recurring": "Yes" if t["recurring"] else "No",
-        "Every N days": t["interval_days"],
+        "Recurring": _to_schedule(t),
     } for t in suggestions])
 
     edited_df = st.data_editor(
@@ -78,8 +96,10 @@ if st.session_state.get("ai_suggestions") and st.session_state.get("suggestions_
             "Duration (min)": st.column_config.NumberColumn("Duration (min)", min_value=1, max_value=240, step=1),
             "Priority": st.column_config.NumberColumn("Priority", min_value=1, max_value=5, step=1),
             "Time": st.column_config.TextColumn("Time", help="Format: HH:MM"),
-            "Recurring": st.column_config.SelectboxColumn("Recurring", options=["Yes", "No"]),
-            "Every N days": st.column_config.NumberColumn("Every N days", min_value=1, max_value=365, step=1),
+            "Recurring": st.column_config.TextColumn(
+                "Recurring",
+                help='Type "No", "Yes, daily", "Yes, weekly", "Yes, monthly", "Yes, yearly", or "Yes, every N days"',
+            ),
         },
         disabled=["Task", "Category"],
     )
@@ -90,8 +110,8 @@ if st.session_state.get("ai_suggestions") and st.session_state.get("suggestions_
             "duration_minutes": int(row["Duration (min)"]),
             "priority": int(row["Priority"]),
             "time": row["Time"],
-            "recurring": row["Recurring"] == "Yes",
-            "interval_days": int(row["Every N days"]),
+            "recurring": _parse_schedule(row["Recurring"])[0],
+            "interval_days": _parse_schedule(row["Recurring"])[1],
         }
         for i, row in edited_df.iterrows() if row["Add"]
     ]
