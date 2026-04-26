@@ -73,11 +73,28 @@ if st.session_state.get("ai_suggestions") and st.session_state.get("suggestions_
         df,
         use_container_width=True,
         hide_index=True,
-        column_config={"Add": st.column_config.CheckboxColumn("Add", default=True)},
-        disabled=["Task", "Category", "Duration (min)", "Priority", "Time", "Recurring", "Every N days"],
+        column_config={
+            "Add": st.column_config.CheckboxColumn("Add", default=True),
+            "Duration (min)": st.column_config.NumberColumn("Duration (min)", min_value=1, max_value=240, step=1),
+            "Priority": st.column_config.NumberColumn("Priority", min_value=1, max_value=5, step=1),
+            "Time": st.column_config.TextColumn("Time", help="Format: HH:MM"),
+            "Recurring": st.column_config.SelectboxColumn("Recurring", options=["Yes", "No"]),
+            "Every N days": st.column_config.NumberColumn("Every N days", min_value=1, max_value=365, step=1),
+        },
+        disabled=["Task", "Category"],
     )
 
-    selected = [suggestions[i] for i, row in edited_df.iterrows() if row["Add"]]
+    selected = [
+        {
+            **suggestions[i],
+            "duration_minutes": int(row["Duration (min)"]),
+            "priority": int(row["Priority"]),
+            "time": row["Time"],
+            "recurring": row["Recurring"] == "Yes",
+            "interval_days": int(row["Every N days"]),
+        }
+        for i, row in edited_df.iterrows() if row["Add"]
+    ]
 
     col_confirm, col_skip = st.columns(2)
     with col_confirm:
