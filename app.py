@@ -1,7 +1,9 @@
 # streamlit run app.py
 
 import streamlit as st
+import pandas as pd
 from pawpal_system import Owner, Pet, Task, Scheduler
+from agent import suggest_tasks
 
 st.set_page_config(page_title="PawPal+", page_icon="🐾", layout="centered")
 
@@ -19,25 +21,88 @@ st.divider()
 
 # ── Add a Pet ─────────────────────────────────────────────────────────────────
 st.subheader("Add a Pet")
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 with col1:
     pet_name = st.text_input("Pet name", value="Mochi")
 with col2:
     species = st.selectbox("Species", ["Dog", "Cat", "Other"])
 with col3:
+    breed = st.text_input("Breed (optional)", value="")
+with col4:
     age = st.number_input("Age", min_value=0, max_value=30, value=2)
 
-if st.button("Add Pet"):
+if st.button("Add Pet + AI Suggestions"):
     existing = [p.name for p in pets]
     if pet_name in existing:
         st.warning(f"{pet_name} is already added.")
     else:
-        owner.add_pet(Pet(name=pet_name, species=species, breed="", age=int(age)))
-        st.success(f"Added {pet_name} the {species}!")
-        st.rerun()
+        owner.add_pet(Pet(name=pet_name, species=species, breed=breed, age=int(age)))
+        with st.spinner("Generating care tasks with AI..."):
+            try:
+                suggestions = suggest_tasks(pet_name, species, breed, int(age))
+                st.session_state.ai_suggestions = suggestions
+                st.session_state.suggestions_for = pet_name
+                st.rerun()
+            except Exception as e:
+                st.session_state.ai_suggestions = None
+                st.error(f"AI suggestions failed: {e}")
 
 if pets:
     st.write("**Registered pets:**", ", ".join(p.name for p in pets))
+
+# ── AI Task Suggestions confirmation ─────────────────────────────────────────
+if st.session_state.get("ai_suggestions") and st.session_state.get("suggestions_for"):
+    pet_for = st.session_state.suggestions_for
+    suggestions = st.session_state.ai_suggestions
+
+    st.subheader(f"AI Suggested Tasks for {pet_for}")
+    st.info("Uncheck any tasks you don't want, then click **Confirm Selected Tasks**.")
+
+    df = pd.DataFrame([{
+        "Add": True,
+        "Task": t["name"],
+        "Category": t["category"],
+        "Duration (min)": t["duration_minutes"],
+        "Priority": t["priority"],
+        "Time": t["time"],
+        "Recurring": "Yes" if t["recurring"] else "No",
+        "Every N days": t["interval_days"],
+    } for t in suggestions])
+
+    edited_df = st.data_editor(
+        df,
+        use_container_width=True,
+        hide_index=True,
+        column_config={"Add": st.column_config.CheckboxColumn("Add", default=True)},
+        disabled=["Task", "Category", "Duration (min)", "Priority", "Time", "Recurring", "Every N days"],
+    )
+
+    selected = [suggestions[i] for i, row in edited_df.iterrows() if row["Add"]]
+
+    col_confirm, col_skip = st.columns(2)
+    with col_confirm:
+        if st.button("Confirm Selected Tasks", type="primary"):
+            pet_obj = next((p for p in pets if p.name == pet_for), None)
+            if pet_obj and selected:
+                for t in selected:
+                    pet_obj.add_task(Task(
+                        name=t["name"],
+                        category=t["category"],
+                        duration_minutes=t["duration_minutes"],
+                        priority=t["priority"],
+                        time=t["time"],
+                        recurring=t["recurring"],
+                        interval_days=t["interval_days"],
+                    ))
+            st.session_state.ai_suggestions = None
+            st.session_state.suggestions_for = None
+            st.success(f"Added {len(selected)} task(s) to {pet_for}!")
+            st.rerun()
+    with col_skip:
+        if st.button("Skip"):
+            st.session_state.ai_suggestions = None
+            st.session_state.suggestions_for = None
+            st.rerun()
 
 st.divider()
 
