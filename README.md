@@ -34,16 +34,23 @@ PawPal AI Task Generator has four main components. Streamlit UI handles all user
 
 ![Persian Output](img/persian.png)
 
-Name: Max
-Species: Other
-Breed: Rabbit
-Age: 2
+Name: Max | Species: Other | Breed: Rabbit | Age: 2
 
 Output:
 ![Rabbit Output](img/rabbit.png)
 
 ## Design Decisions
 
+I chose a static Python dictionary for understanding instead of a vector database. This keeps the project simple for a small set of species and breeds. A dictionary lookup is fast and predictable. The trade-off is that it doesn't scale well if you want to add hundreds of breeds or uploads custom documents.
+
+Also, I added a confirmation step that allows users to choose and edit specific tasks that AI generated. This makes the schedule more personalizable and gives user full control of what actually gets added.
+
 ## Testing Summary
 
-## Reflection
+The RAG retrieval worked consistently. Adding a breed like Golden Retriever correctly pulled breed-specific care info and Claude generated relevant tasks like coat brushing and ear cleaning rather than generic ones. However, AI generate tasks with the same scheduled time which automatically triggered conflict warnings after confirming.
+
+## Reliability and Evaluation
+
+All 11 automated test in tests/test_ai.py are passing.
+
+Six of them focus on the RAG retriever. They check that the system returns the correct care guides for specific breeds, handles case differences properly, and still works smoothly when the breed or species isn't recognized. The other five tests cover the AI agent, using mocked API calls. These make sure the response gets turned into a clean task list, includes all the required fields, removes any markdown formatting like code fences, and correctly incorporates the pet's details into the prompt sent to Claude.
