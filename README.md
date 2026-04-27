@@ -30,7 +30,7 @@ PawPal AI Task Generator has four main components. Streamlit UI handles all user
 
 ## Sample Interactions
 
-![Golden Retriever Output](img/golden-retriever.pnggolden-retriever.png)
+![Golden Retriever Output](img/golden-retriever.png)
 
 ![Persian Output](img/persian.png)
 
