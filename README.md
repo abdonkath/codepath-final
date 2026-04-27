@@ -1,95 +1,60 @@
-# PawPal+ (Module 2 Project)
 
-You are building **PawPal+**, a Streamlit app that helps a pet owner plan care tasks for their pet.
 
-## Scenario
+https://github.com/user-attachments/assets/03a359cb-9f38-4a8b-b634-70eebf2c2cfb
 
-A busy pet owner needs help staying consistent with pet care. They want an assistant that can:
+# PawPal AI Task Generator
 
-- Track pet care tasks (walks, feeding, meds, enrichment, grooming, etc.)
-- Consider constraints (time available, priority, owner preferences)
-- Produce a daily plan and explain why it chose that plan
+The original project is PawPal+, a pet care scheduling system built in Module 2. It allowed pet owners to register multiple pets, manually create care tasks with details like priority, duration, and scheduled time, and generate a daily plan that fit within the owner's available time. The system also included sorting, filtering by pet or status, recurring task support, and automatic conflict detection when two tasks were scheduled at the same time.
 
-Your job is to design the system first (UML), then implement the logic in Python, then connect it to the Streamlit UI.
+My project extends the original scheduler by adding an AI-powered onboarding flow. When a new pet is added, the system retrives breed and species care guides from RAG, then passes that information to Claude to generate a personalized starter task list. The user can review, edit, and confirm tasks before they are saved to the schedule.
 
-## What you will build
+This project makes it easier for pet owners to create a routine care for their specific pet needs or how often. Instead of manually researching and entering every task, PawPal+ does it for you in seconds.
 
-Your final app should:
+## System Design & Architecture Overview
 
-- Let a user enter basic owner + pet info
-- Let a user add/edit tasks (duration + priority at minimum)
-- Generate a daily schedule/plan based on constraints and priorities
-- Display the plan clearly (and ideally explain the reasoning)
-- Include tests for the most important scheduling behaviors
+View my system diagram in excalidraw!
 
-## Features
+https://excalidraw.com/#json=4M0cXX9_Z9QB52jtcfEfw,AyuPsHiPfFPwpYIqoC1-0A
 
-- **Priority-based scheduling** — `Scheduler.generate_plan()` picks incomplete tasks in priority order (1–5), fitting as many as possible within the owner's available minutes for the day.
-- **Sorting by time** — `sort_by_time()` uses Python's `sorted()` with a `lambda` key on `"HH:MM"` strings to return every task in chronological order, regardless of the order they were added.
-- **Filtering** — `filter_tasks(pet_name, completed)` lets you narrow the task list by pet and/or completion status. Both filters are optional and can be combined.
-- **Conflict warnings** — `get_conflict_warnings()` scans all scheduled tasks for exact time-slot collisions and returns plain-English warning strings (e.g., `"Walk (Buddy) and Vet (Whiskers) are both at 09:00"`). The Streamlit UI surfaces these as `st.warning()` banners so they are impossible to miss.
-- **Recurring tasks** — Tasks can be marked `recurring=True` with an `interval_days` value. When `mark_task_complete()` is called, it uses Python's `timedelta` to compute the next due date and automatically adds the next occurrence to the pet's task list.
-- **High-priority flag** — `Task.is_high_priority()` returns `True` for any task with priority ≥ 4, used by the UI to highlight urgent care items.
+PawPal AI Task Generator has four main components. Streamlit UI handles all user input and display such as adding pets, reviewing suggestions, and managing schedule. The RAG Retriever (knowledge_base.py) stores care guides organized by species and breed, and fetches the relevant content when a new pet is added. The AI Agent (agent.py) receives the retrieved care guide along with the pet's details and calls Claude to generate a personalized task list as structured JSON. Finally, the Core Scheduler (pawpal_system.py) handles all task logic such as storing tasks, sorting, filtering, and detecting time conflicts.
 
-## Smarter Scheduling
+## Setup Instructions
 
-Phase 3 added algorithmic intelligence to the `Scheduler` class in `pawpal_system.py`:
+1. Clone the repository
+   git clone <your-repo-url> cd codepath-final
 
-| Feature                | Method                              | How it works                                                                                                        |
-| ---------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| **Sort by time**       | `sort_by_time()`                    | Uses `sorted()` with a `lambda` key on `"HH:MM"` strings to return all tasks in chronological order                 |
-| **Filter tasks**       | `filter_tasks(pet_name, completed)` | Accepts optional filters for pet name and/or completion status; returns only matching tasks                         |
-| **Recurring tasks**    | `mark_task_complete()`              | When a recurring task is completed, automatically creates the next occurrence using `timedelta(days=interval_days)` |
-| **Conflict detection** | `get_conflict_warnings()`           | Scans all scheduled tasks for exact time-slot collisions and returns plain-English warning strings                  |
+2. Install dependencies
+   pip install -r requirements.txt
 
-`Task` gained three new optional fields to support these features: `time` (`"HH:MM"`), `recurring` (bool), `interval_days` (int), and `due_date` (`date`).
+3. Set your Anthropic API Key
+   export ANTHROPIC_API_KEY="your-key-here"
 
-## Testing PawPal+
+4. Run the app
+   streamlit run app.py
 
-### Run the tests
+## Sample Interactions
 
-```bash
-python -m pytest tests/test_pawpal.py -v
-```
+![Golden Retriever Output](img/golden-retriever.png)
 
-### What the tests cover
+![Persian Output](img/persian.png)
 
-| Group                  | # Tests | Behaviors verified                                                                                                                          |
-| ---------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Task basics**        | 2       | Completing a task flips `completed` to `True`; adding a task grows the pet's list                                                           |
-| **Sorting**            | 3       | Tasks return in chronological `HH:MM` order; single task and empty pet don't crash                                                          |
-| **Filtering**          | 3       | Filter by pet name; filter by completion status; no filters returns all tasks                                                               |
-| **Recurring tasks**    | 4       | Daily recurrence schedules next task for tomorrow; weekly for +7 days; non-recurring returns `None`; task count grows after each completion |
-| **Conflict detection** | 4       | Cross-pet time clash is flagged; same-pet clash is flagged; different times produce no warning; unscheduled tasks (`"00:00"`) are ignored   |
+Name: Max | Species: Other | Breed: Rabbit | Age: 2
 
-**Total: 16 tests, all passing.**
+Output:
+![Rabbit Output](img/rabbit.png)
 
-### Confidence level
+## Design Decisions
 
-(4/5)
+I chose a static Python dictionary for understanding instead of a vector database. This keeps the project simple for a small set of species and breeds. A dictionary lookup is fast and predictable. The trade-off is that it doesn't scale well if you want to add hundreds of breeds or uploads custom documents.
 
-The core scheduling behaviors — sorting, filtering, recurring automation, and conflict detection — are all covered with both happy-path and edge-case tests. One star is held back because conflict detection only checks for exact `HH:MM` matches and does not catch overlapping durations (e.g., a 30-minute task at 09:00 overlapping a task starting at 09:20).
+Also, I added a confirmation step that allows users to choose and edit specific tasks that AI generated. This makes the schedule more personalizable and gives user full control of what actually gets added.
 
-### Demo
+## Testing Summary
 
-<a href="Screenshot 2026-03-30 004825.png" target="_blank"><img src='Screenshot 2026-03-30 004825.png' title='PawPal App' width='' alt='PawPal App' class='center-block' /></a>
+The RAG retrieval worked consistently. Adding a breed like Golden Retriever correctly pulled breed-specific care info and Claude generated relevant tasks like coat brushing and ear cleaning rather than generic ones. However, AI generate tasks with the same scheduled time which automatically triggered conflict warnings after confirming.
 
-## Getting started
+## Reliability and Evaluation
 
-### Setup
+All 11 automated test in tests/test_ai.py are passing.
 
-```bash
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-### Suggested workflow
-
-1. Read the scenario carefully and identify requirements and edge cases.
-2. Draft a UML diagram (classes, attributes, methods, relationships).
-3. Convert UML into Python class stubs (no logic yet).
-4. Implement scheduling logic in small increments.
-5. Add tests to verify key behaviors.
-6. Connect your logic to the Streamlit UI in `app.py`.
-7. Refine UML so it matches what you actually built.
+Six of them focus on the RAG retriever. They check that the system returns the correct care guides for specific breeds, handles case differences properly, and still works smoothly when the breed or species isn't recognized. The other five tests cover the AI agent, using mocked API calls. These make sure the response gets turned into a clean task list, includes all the required fields, removes any markdown formatting like code fences, and correctly incorporates the pet's details into the prompt sent to Claude.
