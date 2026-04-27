@@ -1,3 +1,7 @@
+
+
+https://github.com/user-attachments/assets/03a359cb-9f38-4a8b-b634-70eebf2c2cfb
+
 # PawPal AI Task Generator
 
 The original project is PawPal+, a pet care scheduling system built in Module 2. It allowed pet owners to register multiple pets, manually create care tasks with details like priority, duration, and scheduled time, and generate a daily plan that fit within the owner's available time. The system also included sorting, filtering by pet or status, recurring task support, and automatic conflict detection when two tasks were scheduled at the same time.
